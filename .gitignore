@@ -11,6 +11,9 @@ env/
 # Output files
 output/
 debug_output/
+dist/
+build/
+*.spec
 
 # Example/test PDFs
 to-clean-example.pdf

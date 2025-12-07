@@ -1,0 +1,55 @@
+name: Build Apps
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Manuel tetikleme
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install flet pyinstaller pymupdf opencv-python numpy Pillow
+
+      - name: Build Mac App
+        run: |
+          flet pack app.py --name "PDFTemizleyiciMAC" --add-data "pdf_processor.py:." --add-data "image_cleaner.py:."
+
+      - name: Upload Mac App
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDFTemizleyiciMAC
+          path: dist/PDFTemizleyiciMAC.app
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install flet pyinstaller pymupdf opencv-python numpy Pillow
+
+      - name: Build Windows App
+        run: |
+          flet pack app.py --name "PDFTemizleyiciWINDOWS" --add-data "pdf_processor.py;." --add-data "image_cleaner.py;."
+
+      - name: Upload Windows App
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDFTemizleyiciWINDOWS
+          path: dist/PDFTemizleyiciWINDOWS.exe
