@@ -16,13 +16,34 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install Tesseract OCR
         run: |
-          pip install flet pyinstaller pymupdf opencv-python numpy Pillow
+          brew install tesseract
+          # Arapça dil paketi indir
+          curl -L -o /opt/homebrew/share/tessdata/ara.traineddata https://github.com/tesseract-ocr/tessdata/raw/main/ara.traineddata
+
+      - name: Install Python dependencies
+        run: |
+          pip install flet pyinstaller pymupdf opencv-python numpy Pillow pytesseract
+
+      - name: Prepare Tesseract for bundling
+        run: |
+          mkdir -p tesseract_bundle
+          # Tesseract binary ve ilgili dosyaları kopyala
+          cp /opt/homebrew/bin/tesseract tesseract_bundle/
+          cp -r /opt/homebrew/share/tessdata tesseract_bundle/
+          # Gerekli kütüphaneleri bul ve kopyala (macOS için)
+          mkdir -p tesseract_bundle/lib
+          for lib in $(otool -L /opt/homebrew/bin/tesseract | grep /opt/homebrew | awk '{print $1}'); do
+            cp "$lib" tesseract_bundle/lib/ 2>/dev/null || true
+          done
 
       - name: Build Mac App
         run: |
-          flet pack app.py --name "PDFTemizleyiciMAC" --add-data "pdf_processor.py:." --add-data "image_cleaner.py:."
+          flet pack app.py --name "PDFTemizleyiciMAC" \
+            --add-data "pdf_processor.py:." \
+            --add-data "image_cleaner.py:." \
+            --add-data "tesseract_bundle:tesseract_bundle"
 
       - name: Upload Mac App
         uses: actions/upload-artifact@v4
@@ -40,13 +61,28 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install Tesseract OCR
         run: |
-          pip install flet pyinstaller pymupdf opencv-python numpy Pillow
+          # Tesseract Windows installer indir ve kur
+          $tesseractUrl = "https://github.com/UB-Mannheim/tesseract/releases/download/v5.3.3.20231005/tesseract-ocr-w64-setup-5.3.3.20231005.exe"
+          Invoke-WebRequest -Uri $tesseractUrl -OutFile tesseract-installer.exe
+          Start-Process -FilePath .\tesseract-installer.exe -Args "/S" -Wait
+          # Arapça dil paketi indir
+          Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/ara.traineddata" -OutFile "C:\Program Files\Tesseract-OCR\tessdata\ara.traineddata"
+
+      - name: Install Python dependencies
+        run: |
+          pip install flet pyinstaller pymupdf opencv-python numpy Pillow pytesseract
+
+      - name: Prepare Tesseract for bundling
+        run: |
+          mkdir tesseract_bundle
+          # Tesseract dizinini kopyala
+          xcopy "C:\Program Files\Tesseract-OCR\*" tesseract_bundle\ /E /I /H
 
       - name: Build Windows App
         run: |
-          flet pack app.py --name "PDFTemizleyiciWINDOWS" --add-data "pdf_processor.py;." --add-data "image_cleaner.py;."
+          flet pack app.py --name "PDFTemizleyiciWINDOWS" --add-data "pdf_processor.py;." --add-data "image_cleaner.py;." --add-data "tesseract_bundle;tesseract_bundle"
 
       - name: Upload Windows App
         uses: actions/upload-artifact@v4
