@@ -73,18 +73,34 @@ def center_page_content(
     if abs(shift_x) < 5 and abs(shift_y) < 5:
         return False
     
-    # Sayfanın tüm içeriğini al
-    # Yeni bir sayfa oluştur ve içeriği kaydırarak kopyala
-    
-    # Önce mevcut sayfayı bir görüntü olarak al (temizlenmiş hali)
-    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x çözünürlük
-    
-    # Yeni boş sayfa oluşturmak yerine, sayfayı yeniden çiz
     # İçerik alanını kırp
     clip_rect = fitz.Rect(content_x0, content_y0, content_x1, content_y1)
     
     # İçerik bölgesinin pixmap'ini al
     content_pix = page.get_pixmap(clip=clip_rect, matrix=fitz.Matrix(2, 2))
+    
+    # Pixmap'i numpy array'e çevir ve arka planı beyazlat
+    img_array = np.frombuffer(content_pix.samples, dtype=np.uint8).reshape(
+        content_pix.height, content_pix.width, content_pix.n
+    )
+    img_array = img_array.copy()  # Yazılabilir kopya
+    
+    # Açık gri pikselleri beyaza çevir (threshold: 200'den büyük = beyaz yap)
+    if content_pix.n >= 3:  # RGB veya RGBA
+        gray_mask = np.all(img_array[:, :, :3] > 200, axis=2)
+        img_array[gray_mask] = 255
+    
+    # Numpy array'i tekrar PNG'ye çevir
+    from PIL import Image as PILImage
+    if content_pix.n == 4:  # RGBA
+        pil_img = PILImage.fromarray(img_array, mode='RGBA')
+    else:  # RGB
+        pil_img = PILImage.fromarray(img_array, mode='RGB')
+    
+    import io
+    img_buffer = io.BytesIO()
+    pil_img.save(img_buffer, format='PNG')
+    img_data = img_buffer.getvalue()
     
     # Sayfayı beyazla doldur
     shape = page.new_shape()
@@ -98,7 +114,6 @@ def center_page_content(
     new_rect = fitz.Rect(new_x0, new_y0, new_x0 + content_width, new_y0 + content_height)
     
     # İçeriği yeni konuma yerleştir
-    img_data = content_pix.tobytes("png")
     page.insert_image(new_rect, stream=img_data)
     
     return True
