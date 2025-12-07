@@ -28,15 +28,12 @@ jobs:
 
       - name: Prepare Tesseract for bundling
         run: |
-          mkdir -p tesseract_bundle
-          # Tesseract binary ve ilgili dosyaları kopyala
+          mkdir -p tesseract_bundle/tessdata
+          # Tesseract binary
           cp /opt/homebrew/bin/tesseract tesseract_bundle/
-          cp -r /opt/homebrew/share/tessdata tesseract_bundle/
-          # Gerekli kütüphaneleri bul ve kopyala (macOS için)
-          mkdir -p tesseract_bundle/lib
-          for lib in $(otool -L /opt/homebrew/bin/tesseract | grep /opt/homebrew | awk '{print $1}'); do
-            cp "$lib" tesseract_bundle/lib/ 2>/dev/null || true
-          done
+          chmod +x tesseract_bundle/tesseract
+          # Tessdata
+          cp /opt/homebrew/share/tessdata/*.traineddata tesseract_bundle/tessdata/
 
       - name: Build Mac App
         run: |
@@ -61,12 +58,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Tesseract OCR
+      - name: Install Tesseract OCR via Chocolatey
         run: |
-          # Tesseract Windows installer indir ve kur
-          $tesseractUrl = "https://github.com/UB-Mannheim/tesseract/releases/download/v5.3.3.20231005/tesseract-ocr-w64-setup-5.3.3.20231005.exe"
-          Invoke-WebRequest -Uri $tesseractUrl -OutFile tesseract-installer.exe
-          Start-Process -FilePath .\tesseract-installer.exe -Args "/S" -Wait
+          choco install tesseract -y
           # Arapça dil paketi indir
           Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/ara.traineddata" -OutFile "C:\Program Files\Tesseract-OCR\tessdata\ara.traineddata"
 
